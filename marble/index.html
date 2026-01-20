@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marble Photo Collection</title>
+    <link rel = "stylesheet" href = "https://unpkg.com/ress/dist/ress.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- ProgressBar.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/progressbar.js@1.1.0/dist/progressbar.min.js"></script>
+    <script src="js/script.js" defer></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playwrite+CZ:wght@100..400&display=swap" rel="stylesheet">
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- GLTFLoader -->
+    <script>
+(function(global) {
+  if (typeof THREE === 'undefined') return;
+  
+  const GLTFLoader = function(manager) {
+    this.manager = manager || THREE.DefaultLoadingManager;
+  };
+  
+  GLTFLoader.prototype = Object.assign(Object.create(THREE.EventDispatcher.prototype), {
+    constructor: GLTFLoader,
+    load: function(url, onLoad, onProgress, onError) {
+      const scope = this;
+      const loader = new THREE.FileLoader(this.manager);
+      loader.setResponseType('arraybuffer');
+      loader.load(url, function(data) {
+        try {
+          scope.parse(data, url, onLoad, onError);
+        } catch(e) {
+          console.error('Parse error:', e);
+          onError(e);
+        }
+      }, onProgress, onError);
+    },
+    
+    parse: function(data, url, onLoad, onError) {
+      const view = new DataView(data);
+      
+      // GLB header
+      const magic = String.fromCharCode(
+        view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3)
+      );
+      
+      if(magic !== 'glTF') {
+        onError(new Error('Invalid GLB file'));
+        return;
+      }
+      
+      const version = view.getUint32(4, true);
+      if(version !== 2) {
+        onError(new Error('GLB version ' + version + ' not supported'));
+        return;
+      }
+      
+      // Chunk 1 (JSON)
+      const jsonChunkLength = view.getUint32(12, true);
+      const jsonChunkType = String.fromCharCode(
+        view.getUint8(16), view.getUint8(17), view.getUint8(18), view.getUint8(19)
+      );
+      
+      if(jsonChunkType !== 'JSON') {
+        onError(new Error('First chunk is not JSON'));
+        return;
+      }
+      
+      // JSONデータは20バイト目から始まる
+      const jsonData = new Uint8Array(data, 20, jsonChunkLength);
+      const jsonString = new TextDecoder().decode(jsonData);
+      
+      let json;
+      try {
+        json = JSON.parse(jsonString);
+      } catch(e) {
+        onError(new Error('Invalid JSON: ' + e.message));
+        return;
+      }
+      
+      // Chunk 2 (BIN) - オプション
+      let binData = null;
+      const binStart = 20 + jsonChunkLength;
+      console.log('JSON chunk length:', jsonChunkLength);
+      console.log('BIN chunk expected at:', binStart);
+      console.log('Total data size:', data.byteLength);
+      
+      if(binStart + 8 < data.byteLength) {
+        const binChunkLength = view.getUint32(binStart, true);
+        const binChunkTypeByte0 = view.getUint8(binStart + 4);
+        const binChunkTypeByte1 = view.getUint8(binStart + 5);
+        const binChunkTypeByte2 = view.getUint8(binStart + 6);
+        const binChunkTypeByte3 = view.getUint8(binStart + 7);
+        
+        console.log('BIN chunk length:', binChunkLength);
+        console.log('BIN chunk type bytes:', binChunkTypeByte0, binChunkTypeByte1, binChunkTypeByte2, binChunkTypeByte3);
+        
+        // チャンクタイプが "BIN\0" (0x42 0x49 0x4E 0x00)
+        if(binChunkTypeByte0 === 0x42 && binChunkTypeByte1 === 0x49 && binChunkTypeByte2 === 0x4E) {
+          binData = new Uint8Array(data, binStart + 8, binChunkLength);
+          console.log('BIN data found:', binData.length, 'bytes');
+        } else {
+          console.warn('Unknown chunk type');
+        }
+      }
+      
+      this.buildScene(json, binData, onLoad, onError);
+    },
+    
+    buildScene: function(json, binData, onLoad, onError) {
+      try {
+        const scene = new THREE.Scene();
+        
+        if(!binData) {
+          console.warn('No binary data in GLB, creating placeholder');
+          // フォールバック：簡単なキューブを作成
+          const geometry = new THREE.BoxGeometry(1, 1, 1);
+          const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
+          onLoad({ scene: scene });
+          return;
+        }
+        
+        // Process all nodes
+        if(json.nodes) {
+          json.nodes.forEach((node) => {
+            if(node.mesh !== undefined && json.meshes) {
+              const meshData = json.meshes[node.mesh];
+              if(meshData && meshData.primitives && json.accessors) {
+                const prim = meshData.primitives[0];
+                
+                const geometry = new THREE.BufferGeometry();
+                
+                // POSITION
+                if(prim.attributes && prim.attributes.POSITION !== undefined) {
+                  const posAccIdx = prim.attributes.POSITION;
+                  const accessor = json.accessors[posAccIdx];
+                  const bufView = json.bufferViews[accessor.bufferView];
+                  const offset = (bufView.byteOffset || 0) + (accessor.byteOffset || 0);
+                  const positions = new Float32Array(binData.buffer, binData.byteOffset + offset, accessor.count * 3);
+                  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                }
+                
+                // NORMAL
+                if(prim.attributes && prim.attributes.NORMAL !== undefined) {
+                  const normAccIdx = prim.attributes.NORMAL;
+                  const accessor = json.accessors[normAccIdx];
+                  const bufView = json.bufferViews[accessor.bufferView];
+                  const offset = (bufView.byteOffset || 0) + (accessor.byteOffset || 0);
+                  const normals = new Float32Array(binData.buffer, binData.byteOffset + offset, accessor.count * 3);
+                  geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+                }
+                
+                // INDEX
+                if(prim.indices !== undefined) {
+                  const idxAccIdx = prim.indices;
+                  const accessor = json.accessors[idxAccIdx];
+                  const bufView = json.bufferViews[accessor.bufferView];
+                  const offset = (bufView.byteOffset || 0) + (accessor.byteOffset || 0);
+                  const type = accessor.componentType === 5125 ? Uint32Array : Uint16Array;
+                  const indices = new type(binData.buffer, binData.byteOffset + offset, accessor.count);
+                  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+                }
+                
+                geometry.computeBoundingBox();
+                geometry.center();
+                
+                const material = new THREE.MeshPhongMaterial({
+                  color: 0xffffff,
+                  side: THREE.DoubleSide,
+                  emissive: 0x222222
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                scene.add(mesh);
+              }
+            }
+          });
+        }
+        
+        onLoad({ scene: scene });
+      } catch(e) {
+        console.error('Scene build error:', e.stack);
+        onError(e);
+      }
+    }
+  });
+  
+  global.THREE.GLTFLoader = GLTFLoader;
+})(window);
+    </script>
+
+    <script src="js/catHouse.js" defer></script>
+    </head>
+
+    <body>
+        <!-- ウェルカムアラート -->
+        <!-- <script>window.alert('welcome to Marble Photo Collection!')</script> -->
+
+        <!-- ローディング画面　-->
+        <div id = "loading">
+            <div id="progressbar">
+                <svg xmlns="http://www.w3.org/2000/svg" version="1.1" x="0px" y="0px" viewBox="0 0 100 100">
+                  <path fill-opacity="0" stroke-width="1" stroke="#bbb" d="M81.495,13.923c-11.368-5.261-26.234-0.311-31.489,11.032C44.74,13.612,29.879,8.657,18.511,13.923  C6.402,19.539,0.613,33.883,10.175,50.804c6.792,12.04,18.826,21.111,39.831,37.379c20.993-16.268,33.033-25.344,39.819-37.379  C99.387,33.883,93.598,19.539,81.495,13.923z"/>
+                  <path id="heart-path" fill-opacity="0" stroke-width="3" stroke="#403632" d="M81.495,13.923c-11.368-5.261-26.234-0.311-31.489,11.032C44.74,13.612,29.879,8.657,18.511,13.923  C6.402,19.539,0.613,33.883,10.175,50.804c6.792,12.04,18.826,21.111,39.831,37.379c20.993-16.268,33.033-25.344,39.819-37.379  C99.387,33.883,93.598,19.539,81.495,13.923z"/>
+                </svg>
+            </div>
+            <div id = "loading-screen"></div>
+        </div>
+
+        <!-- トップページ -->
+        <section class ="topPage">
+
+            <video id="bg-video" autoplay muted playsinline preload="auto">
+                <!-- <source src="video/topPage.MP4" type="video/mp4">-->
+                <source src="video/Fordebug.mp4" type="video/mp4">
+
+            </video>
+            <div class="overlay"></div>
+
+            <h1 class = "title">Marble</h1>
+
+        </section>
+
+        <!-- プロフィール　-->
+         <div class = "profile">
+            <h2 id = "profile-title">Profile</h2>
+            <!-- <h3 id = "profile-name">Marble</h3> -->
+            <ul id = "profile-list">
+                <li><h5 class = "profile-item">Name</h5><br><div class = "profile-ans">Marble</div></li>
+                <li><h5 class = "profile-item">Birthdate</h5><br><div class = "profile-ans">2020.10.29</div></li>
+                <li><h5 class = "profile-item">Hobby</h5><br><div class = "profile-ans">Sleeping</div></li>
+                <li><h5 class = "profile-item">Favorite food</h5><br><div class = "profile-ans">Ciao Chul</div></li>
+                <li><h5 class = "profile-item">Personality</h5><br><div class = "profile-ans">Kind</div></li>
+                <li><h5 class = "profile-item">Special skill</h5><br><div class = "profile-ans">To escape from people trying to catch me</div></li>
+            </ul>
+            
+         </div>
+
+        <!-- キャットハウス　-->
+         <div id="catHouse-container"></div>
+    </body>

@@ -1,0 +1,164 @@
+@charset 'UTF-8';
+
+
+/*
+VARIABLES
+================================================ */
+:root {
+    --light-brown   : #8f8477;
+    --brown         : #403632;
+    --white         : #fff;
+    --dark-brown    : #2c241f;
+}
+
+/* COMMON
+================================================ */
+body.noscroll {       /*-  「body 要素に noscroll というクラスが付いているとき」 に適用される CSS -*/
+  overflow: hidden;   /* スクロールバーを消して禁止 */
+  height: 100%;       /* 全体を固定 */
+}
+
+/*
+LOADING SCREEN
+================================================ */
+#loading {
+    background-color    : var(--light-brown);
+    position            : fixed;                /*スクロールしても動かない*/
+    inset               : 0;                    /*上下左右0で全体的に表示される*/
+    z-index             : 9999;                 /*最前面に表示。値が大きいほど最前面になる*/
+    display             : grid;                 /*中央寄せにするためにgridを使用*/
+    place-items        : center;                /*中央寄せ*/
+    overflow: hidden;                           /* スクロールバーを消してスクロール禁止 */
+    height: 100%;                               /* 全体を固定 */
+}
+
+#progressbar {
+  margin: 20px;
+  width: 200px;
+  height: 200px;
+}
+
+#loading-screen {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: var(--dark-brown);
+  z-index: 9998;
+  translate: 0 100vh;                           /*x軸は0、y軸は100ViewHeight下、つまり画面外に配置*/
+}
+
+/*
+TOP PAGE
+================================================ */
+.topPage {
+  background-color: var(--light-brown);
+  height: 100vh;
+  width: 100vw;
+  display: flex;                           /*中央寄せのためにflexを使用*/
+  position: relative;                      /*子要素の絶対配置の基準にするためにrelativeを指定*/  
+  overflow: hidden;                        /*はみ出した部分を非表示にする*/
+}
+
+.title {
+  color: var(--dark-brown);
+  font-size: 4rem;
+  margin: auto;                            /*上下左右中央寄せ*/
+  font-family: "Playwrite CZ", cursive;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  z-index: 1;                              /* テキストを動画の上に */
+  position: relative;
+}
+
+.topPage video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;                     /* アスペクト比を保ちながら埋める */
+    z-index: 0;                           /* 動画を背景に */
+    position: fixed;
+
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.3); /* 白の半透明で薄く見せる */
+  z-index: 1;
+}
+
+/*
+PROFILE
+================================================ */
+
+.profile {
+  color: var(--dark-brown);
+  position: relative;                      /*子要素の絶対配置の基準にするためにrelativeを指定*/
+  z-index: 9999;
+  height: 100vh;
+  /*display: flex;                           /*中央寄せのためにflexを使用*/
+  /*justify-content: center;                 /*横方向中央寄せ*/
+  /*align-items: center;                     /*縦方向中央寄せ*/
+  /*font-size: 2rem;
+  padding: 0 20px;                          /*左右に余白を追加*/
+  /*box-sizing: border-box;                 /*paddingを含めたサイズ計算にする*/
+  /*text-align: center;                     /*テキストを中央揃えにする*/
+}
+
+#profile-title {
+  color: var(--dark-brown); 
+  font-size: 4rem;
+  font-family: "Playwrite CZ", cursive;
+  font-weight: 400;
+  text-align: center;
+  margin-top: 20px;
+}
+
+#profile-list {
+  display: grid;                                       /*グリッドレイアウトを使用*/                 
+  gap: 4rem;
+  grid-template-columns: repeat(3, 1fr);               /*1frは分割の単位。これは1fr 1fr 1frと同義*/
+  list-style: none;                                    /*リストの点を非表示*/
+  margin: 2rem 0;
+  margin-left: 100px;
+  margin-right: 100px;
+}
+
+#profile-list li {
+  border: 2px solid var(--dark-brown);
+  padding: 4rem;
+  border-radius: 10px;
+  background: #beb0a5;
+}
+
+.profile-item {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 0rem;
+  border-bottom: 2px solid var(--dark-brown);         /* 下線 */
+  padding-bottom: 0.5rem;
+}
+
+.profile-ans {
+  font-size: 1.3rem;
+  text-align: center;
+  margin-top: 0rem;
+}
+
+/* CAT HOUSE
+================================================ */
+#catHouse-container {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: 300px;
+    height: 300px;
+    z-index: 1000;
+    background-color: transparent;
+}
