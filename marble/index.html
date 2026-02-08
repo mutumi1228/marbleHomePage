@@ -18,186 +18,6 @@
     <!-- Three.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
-    <!-- GLTFLoader -->
-    <script>
-(function(global) {
-  if (typeof THREE === 'undefined') return;
-  
-  const GLTFLoader = function(manager) {
-    this.manager = manager || THREE.DefaultLoadingManager;
-  };
-  
-  GLTFLoader.prototype = Object.assign(Object.create(THREE.EventDispatcher.prototype), {
-    constructor: GLTFLoader,
-    load: function(url, onLoad, onProgress, onError) {
-      const scope = this;
-      const loader = new THREE.FileLoader(this.manager);
-      loader.setResponseType('arraybuffer');
-      loader.load(url, function(data) {
-        try {
-          scope.parse(data, url, onLoad, onError);
-        } catch(e) {
-          console.error('Parse error:', e);
-          onError(e);
-        }
-      }, onProgress, onError);
-    },
-    
-    parse: function(data, url, onLoad, onError) {
-      const view = new DataView(data);
-      
-      // GLB header
-      const magic = String.fromCharCode(
-        view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3)
-      );
-      
-      if(magic !== 'glTF') {
-        onError(new Error('Invalid GLB file'));
-        return;
-      }
-      
-      const version = view.getUint32(4, true);
-      if(version !== 2) {
-        onError(new Error('GLB version ' + version + ' not supported'));
-        return;
-      }
-      
-      // Chunk 1 (JSON)
-      const jsonChunkLength = view.getUint32(12, true);
-      const jsonChunkType = String.fromCharCode(
-        view.getUint8(16), view.getUint8(17), view.getUint8(18), view.getUint8(19)
-      );
-      
-      if(jsonChunkType !== 'JSON') {
-        onError(new Error('First chunk is not JSON'));
-        return;
-      }
-      
-      // JSONデータは20バイト目から始まる
-      const jsonData = new Uint8Array(data, 20, jsonChunkLength);
-      const jsonString = new TextDecoder().decode(jsonData);
-      
-      let json;
-      try {
-        json = JSON.parse(jsonString);
-      } catch(e) {
-        onError(new Error('Invalid JSON: ' + e.message));
-        return;
-      }
-      
-      // Chunk 2 (BIN) - オプション
-      let binData = null;
-      const binStart = 20 + jsonChunkLength;
-      console.log('JSON chunk length:', jsonChunkLength);
-      console.log('BIN chunk expected at:', binStart);
-      console.log('Total data size:', data.byteLength);
-      
-      if(binStart + 8 < data.byteLength) {
-        const binChunkLength = view.getUint32(binStart, true);
-        const binChunkTypeByte0 = view.getUint8(binStart + 4);
-        const binChunkTypeByte1 = view.getUint8(binStart + 5);
-        const binChunkTypeByte2 = view.getUint8(binStart + 6);
-        const binChunkTypeByte3 = view.getUint8(binStart + 7);
-        
-        console.log('BIN chunk length:', binChunkLength);
-        console.log('BIN chunk type bytes:', binChunkTypeByte0, binChunkTypeByte1, binChunkTypeByte2, binChunkTypeByte3);
-        
-        // チャンクタイプが "BIN\0" (0x42 0x49 0x4E 0x00)
-        if(binChunkTypeByte0 === 0x42 && binChunkTypeByte1 === 0x49 && binChunkTypeByte2 === 0x4E) {
-          binData = new Uint8Array(data, binStart + 8, binChunkLength);
-          console.log('BIN data found:', binData.length, 'bytes');
-        } else {
-          console.warn('Unknown chunk type');
-        }
-      }
-      
-      this.buildScene(json, binData, onLoad, onError);
-    },
-    
-    buildScene: function(json, binData, onLoad, onError) {
-      try {
-        const scene = new THREE.Scene();
-        
-        if(!binData) {
-          console.warn('No binary data in GLB, creating placeholder');
-          // フォールバック：簡単なキューブを作成
-          const geometry = new THREE.BoxGeometry(1, 1, 1);
-          const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
-          const mesh = new THREE.Mesh(geometry, material);
-          scene.add(mesh);
-          onLoad({ scene: scene });
-          return;
-        }
-        
-        // Process all nodes
-        if(json.nodes) {
-          json.nodes.forEach((node) => {
-            if(node.mesh !== undefined && json.meshes) {
-              const meshData = json.meshes[node.mesh];
-              if(meshData && meshData.primitives && json.accessors) {
-                const prim = meshData.primitives[0];
-                
-                const geometry = new THREE.BufferGeometry();
-                
-                // POSITION
-                if(prim.attributes && prim.attributes.POSITION !== undefined) {
-                  const posAccIdx = prim.attributes.POSITION;
-                  const accessor = json.accessors[posAccIdx];
-                  const bufView = json.bufferViews[accessor.bufferView];
-                  const offset = (bufView.byteOffset || 0) + (accessor.byteOffset || 0);
-                  const positions = new Float32Array(binData.buffer, binData.byteOffset + offset, accessor.count * 3);
-                  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-                }
-                
-                // NORMAL
-                if(prim.attributes && prim.attributes.NORMAL !== undefined) {
-                  const normAccIdx = prim.attributes.NORMAL;
-                  const accessor = json.accessors[normAccIdx];
-                  const bufView = json.bufferViews[accessor.bufferView];
-                  const offset = (bufView.byteOffset || 0) + (accessor.byteOffset || 0);
-                  const normals = new Float32Array(binData.buffer, binData.byteOffset + offset, accessor.count * 3);
-                  geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-                }
-                
-                // INDEX
-                if(prim.indices !== undefined) {
-                  const idxAccIdx = prim.indices;
-                  const accessor = json.accessors[idxAccIdx];
-                  const bufView = json.bufferViews[accessor.bufferView];
-                  const offset = (bufView.byteOffset || 0) + (accessor.byteOffset || 0);
-                  const type = accessor.componentType === 5125 ? Uint32Array : Uint16Array;
-                  const indices = new type(binData.buffer, binData.byteOffset + offset, accessor.count);
-                  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-                }
-                
-                geometry.computeBoundingBox();
-                geometry.center();
-                
-                const material = new THREE.MeshPhongMaterial({
-                  color: 0xffffff,
-                  side: THREE.DoubleSide,
-                  emissive: 0x222222
-                });
-                const mesh = new THREE.Mesh(geometry, material);
-                scene.add(mesh);
-              }
-            }
-          });
-        }
-        
-        onLoad({ scene: scene });
-      } catch(e) {
-        console.error('Scene build error:', e.stack);
-        onError(e);
-      }
-    }
-  });
-  
-  global.THREE.GLTFLoader = GLTFLoader;
-})(window);
-    </script>
-
-    <script src="js/catHouse.js" defer></script>
     </head>
 
     <body>
@@ -241,9 +61,27 @@
                 <li><h5 class = "profile-item">Personality</h5><br><div class = "profile-ans">Kind</div></li>
                 <li><h5 class = "profile-item">Special skill</h5><br><div class = "profile-ans">To escape from people trying to catch me</div></li>
             </ul>
-            
          </div>
 
-        <!-- キャットハウス　-->
-         <div id="catHouse-container"></div>
+         <!-- 写真ギャラリー　-->
+          <div class = "photo">
+            <h2 id = "photo-title">Photo Gallery</h2>
+            <div class = "photo-grid">
+                <div class = "bigPhoto">
+                    <img src = "images/marble_1.jpg" alt = "">
+                </div>
+                <div class = "photo-slider">
+                    <img src = "images/marble_1.jpg" alt = "">
+                    <img src = "images/marble_2.jpg" alt = "">
+                    <img src = "images/marble_3.jpg" alt = ""> 
+                    <img src = "images/marble_4.jpg" alt = "">
+                    <img src = "images/marble_5.jpg" alt = "">
+                    <img src = "images/marble_6.jpg" alt = "">
+                </div>
+            </div>
+          </div>
+
+          <div class="footer-line">
+            <p>© 2024 Marble. All rights reserved.</p>
+          </div>
     </body>

@@ -9,10 +9,18 @@ VARIABLES
     --brown         : #403632;
     --white         : #fff;
     --dark-brown    : #2c241f;
+    --cream         : #FFF9E6;
 }
 
 /* COMMON
 ================================================ */
+body {
+  background-image: url(../images/marbleTop.jpg);
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
+}
+
 body.noscroll {       /*-  「body 要素に noscroll というクラスが付いているとき」 に適用される CSS -*/
   overflow: hidden;   /* スクロールバーを消して禁止 */
   height: 100%;       /* 全体を固定 */
@@ -53,7 +61,7 @@ LOADING SCREEN
 TOP PAGE
 ================================================ */
 .topPage {
-  background-color: var(--light-brown);
+  /*background-color: var(--light-brown);*/
   height: 100vh;
   width: 100vw;
   display: flex;                           /*中央寄せのためにflexを使用*/
@@ -80,7 +88,7 @@ TOP PAGE
     width: 100%;
     height: 100%;
     object-fit: cover;                     /* アスペクト比を保ちながら埋める */
-    z-index: 0;                           /* 動画を背景に */
+    z-index: 0;                            /* 動画を背景に */
     position: fixed;
 
 }
@@ -98,9 +106,10 @@ PROFILE
 
 .profile {
   color: var(--dark-brown);
-  position: relative;                      /*子要素の絶対配置の基準にするためにrelativeを指定*/
-  z-index: 9999;
-  height: 100vh;
+  position: relative;                        /*子要素の絶対配置の基準にするためにrelativeを指定*/
+  z-index: 1;
+  min-height: 100vh;                         /*画面の高さに応じて高さを調整*/
+  padding-bottom: 40px;                      /*UIのため下に余白を追加*/   
   /*display: flex;                           /*中央寄せのためにflexを使用*/
   /*justify-content: center;                 /*横方向中央寄せ*/
   /*align-items: center;                     /*縦方向中央寄せ*/
@@ -111,13 +120,13 @@ PROFILE
 }
 
 #profile-title {
-  color: var(--dark-brown); 
+  color: var(--dark-brown);
   font-size: 4rem;
   font-family: "Playwrite CZ", cursive;
   font-weight: 400;
   text-align: center;
   margin-top: 20px;
-}
+  }
 
 #profile-list {
   display: grid;                                       /*グリッドレイアウトを使用*/                 
@@ -133,7 +142,7 @@ PROFILE
   border: 2px solid var(--dark-brown);
   padding: 4rem;
   border-radius: 10px;
-  background: #beb0a5;
+  background: var(--cream);
 }
 
 .profile-item {
@@ -151,14 +160,254 @@ PROFILE
   margin-top: 0rem;
 }
 
-/* CAT HOUSE
+/*
+PICTURE GALLERY
 ================================================ */
-#catHouse-container {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    width: 300px;
-    height: 300px;
-    z-index: 1000;
-    background-color: transparent;
+.photo {
+  min-height: 100vh;
+  padding-bottom: 40px;
+  position: relative;                 /*子要素の絶対配置の基準にするためにrelativeを指定*/
+  z-index: 2;
+}
+
+.photo-grid {
+  display: flex;
+  flex-direction: row;
+  margin-left: 70px;
+}
+
+#photo-title {
+  color: var(--dark-brown); 
+  font-size: 4rem;
+  font-family: "Playwrite CZ", cursive;
+  font-weight: 400;
+  text-align: center;
+  margin-top: 20px;
+  position: relative;                 /*子要素の絶対配置の基準にするためにrelativeを指定*/
+}
+
+.bigPhoto img{
+  width: 40vw;
+  height: 70vh;
+  margin: 20px;
+  margin-left: 50px;
+  border-left: 20px;
+  position: relative;
+  object-fit: cover;                  /*枠いっぱいに画像を表示*/
+  border-radius: 20px;
+}
+
+.photo-slider {
+  width: 30vw;
+  display: grid;                                       /*グリッドレイアウトを使用*/                 
+  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);               /*1frは分割の単位。これは1fr 1fr 1frと同義*/
+  margin-left: 20px;
+  margin: 7rem 10rem;
+  place-items        : center;                         /*中央寄せ*/
+
+  /*margin-left: 100px;
+  margin-right: 100px;*/
+}
+
+.photo-slider img {
+  width: 150px;                                        /*画像をセルの幅に合わせる*/
+  height: 180px;                                       /*高さは自動調整*/
+  border-radius: 10px;                                 /*角を丸くする*/
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);          /*薄い影をつける*/
+  transition: transform 0.3s ease;                     /*ホバー時のアニメーション*/
+  object-fit: cover;                                   /*画像のアスペクト比を保つ*/
+  cursor: pointer;                                     /*マウスオーバーで指マークに変わる*/
+}
+
+.photo-slider img:hover {                   /*サムネイル(img)にマウスオーバー(hover)したとき*/
+    box-shadow: 0 0 1rem rgba(0,0,0,.6);  /*横ずれ 0、縦ずれ 0、ぼかし（blur）1rem 透明度 0.4（40%）*/
+    transition: .4s;                        /*ホバー時の変化にかける時間*/
+}
+
+/*
+FOOTER
+================================================ */
+.footer-line {
+  border-top: 3px dotted var(--light-brown);
+  margin-top: 3rem;
+  padding-top: 2rem;
+  text-align: center;
+}
+
+/*
+MOBILE SIZE
+================================================ */
+/* タブレット・小型デスクトップ (max 1200px) */
+@media(max-width: 1200px){
+  .title {
+    font-size: 3rem;
+  }
+
+  #profile-title,
+  #photo-title {
+    font-size: 3rem;
+  }
+
+  #profile-list {
+    grid-template-columns: repeat(2, 1fr);
+    margin-left: 40px;
+    margin-right: 40px;
+    gap: 2rem;
+  }
+
+  #profile-list li {
+    padding: 2rem;
+  }
+
+  .profile-item {
+    font-size: 1.2rem;
+  }
+
+  .profile-ans {
+    font-size: 1rem;
+  }
+
+  .photo-grid {
+    flex-direction: column;
+    margin-left: 0;
+  }
+
+  .bigPhoto img{
+    width: 90vw;
+    height: 50vh;
+    margin: 20px auto;
+  }
+
+  .photo-slider {
+    width: 90vw;
+    margin: 2rem auto;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .photo-slider img {
+    width: 120px;
+    height: 150px;
+  }
+}
+
+/* スマートフォン (max 768px) */
+@media(max-width: 768px){
+  .title {
+    font-size: 2.5rem;
+    padding: 0 20px;
+  }
+
+  #profile-title,
+  #photo-title {
+    font-size: 2.2rem;
+    margin-top: 10px;
+  }
+
+  #profile-list {
+    grid-template-columns: repeat(1, 1fr);
+    margin-left: 20px;
+    margin-right: 20px;
+    gap: 1.5rem;
+  }
+
+  #profile-list li {
+    padding: 1.5rem;
+  }
+
+  .profile-item {
+    font-size: 1rem;
+  }
+
+  .profile-ans {
+    font-size: 0.9rem;
+  }
+
+  .photo-grid {
+    flex-direction: column;
+    margin-left: 0;
+  }
+
+  .bigPhoto {
+    margin: 0 30px;
+  }
+
+  .bigPhoto img{
+    width: 90vw;
+    height: 35vh;
+    border-radius: 15px;
+  }
+
+  .photo-slider {
+    width: 95vw;
+    margin: 1rem auto;
+    gap: 0.5rem;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .photo-slider img {
+    width: 100px;
+    height: 120px;
+    border-radius: 8px;
+  }
+}
+
+/* 小型スマートフォン (max 480px) */
+@media(max-width: 480px){
+  .title {
+    font-size: 2rem;
+    padding: 0 10px;
+  }
+
+  #profile-title,
+  #photo-title {
+    font-size: 1.8rem;
+    margin-top: 5px;
+  }
+
+  #profile-list {
+    grid-template-columns: repeat(1, 1fr);
+    margin-left: 10px;
+    margin-right: 10px;
+    gap: 1rem;
+  }
+
+  #profile-list li {
+    padding: 1rem;
+  }
+
+  .profile-item {
+    font-size: 0.9rem;
+  }
+
+  .profile-ans {
+    font-size: 0.85rem;
+  }
+
+  .bigPhoto img{
+    width: 90vw;
+    height: 35vh;
+    margin: 10px auto;
+    border-radius: 10px;
+  }
+
+  .photo-slider {
+    width: 90vw;
+    margin: 1rem 0;
+    padding: 0 10px;
+    gap: 0.3rem;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .photo-slider img {
+    width: 80px;
+    height: 100px;
+    border-radius: 6px;
+  }
+
+  .footer-line {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    font-size: 0.85rem;
+  }
 }
