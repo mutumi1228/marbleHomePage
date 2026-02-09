@@ -271,12 +271,18 @@ MOBILE SIZE
   .photo-grid {
     flex-direction: column;
     margin-left: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bigPhoto {
+    margin: 0 auto;
   }
 
   .bigPhoto img{
     width: 90vw;
     height: 50vh;
-    margin: 20px auto;
+    margin: 20px 0;
   }
 
   .photo-slider {
@@ -326,16 +332,19 @@ MOBILE SIZE
   .photo-grid {
     flex-direction: column;
     margin-left: 0;
+    align-items: center;
+    justify-content: center;          /*親要素と子要素の主軸を合わせる*/
   }
 
   .bigPhoto {
-    margin: 0 30px;
+    margin: 0 auto;                   /*親要素.bigPhotoの中で中央寄せ*/
   }
 
   .bigPhoto img{
     width: 90vw;
     height: 35vh;
     border-radius: 15px;
+    margin: 0 auto;                   /*親要素.bigPhotoの中で中央寄せ*/
   }
 
   .photo-slider {
@@ -384,6 +393,13 @@ MOBILE SIZE
     font-size: 0.85rem;
   }
 
+  .photo-grid {
+    flex-direction: column;
+    margin-left: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
   .bigPhoto img{
     width: 90vw;
     height: 35vh;
@@ -393,7 +409,7 @@ MOBILE SIZE
 
   .photo-slider {
     width: 90vw;
-    margin: 1rem 0;
+    margin: 1rem auto;
     padding: 0 10px;
     gap: 0.3rem;
     grid-template-columns: repeat(3, 1fr);
